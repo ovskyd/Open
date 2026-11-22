@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoneyLog - 소비 기록</title>
+
+    <style>
+        /* 기본 화면 설정 */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        /* 제목 */
+        header {
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2563eb;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #777;
+        }
+
+        /* 카드 디자인 */
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        /* 입력 영역 */
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        /* 추가 버튼 */
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* 총 지출 영역 */
+        .total-box {
+            background-color: #eff6ff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .total-label {
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .total-amount {
+            color: #2563eb;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        /* 목록 */
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            gap: 15px;
+        }
+
+        .expense-item:last-child {
+            border-bottom: none;
+        }
+
+        .expense-info {
+            min-width: 0;
+        }
+
+        .expense-category {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .expense-date {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .expense-amount {
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 30px 10px;
+        }
+
+        /* 모바일 화면 */
+        @media (max-width: 500px) {
+            body {
+                padding: 20px 12px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .total-amount {
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <h1>💰 MoneyLog</h1>
+            <p>나의 소비를 기록하고 지출을 관리해 보세요.</p>
+        </header>
+
+        <!-- 지출 입력 -->
+        <section class="card">
+            <h2>지출 입력</h2>
+
+            <form id="expenseForm">
+
+                <div class="input-group">
+                    <label for="amount">지출 금액 (원)</label>
+                    <input
+                        type="text"
+                        id="amount"
+                        placeholder="금액을 입력하세요"
+                        inputmode="numeric"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="category">카테고리</label>
+                    <select id="category">
+                        <option value="식비">식비</option>
+                        <option value="교통비">교통비</option>
+                        <option value="쇼핑">쇼핑</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="date">지출 날짜</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <button type="submit">지출 추가</button>
+
+            </form>
+        </section>
+
+        <!-- 총 지출 -->
+        <section class="card">
+            <h2>총 지출</h2>
+
+            <div class="total-box">
+                <div class="total-label">현재 기록된 총 지출 금액</div>
+                <div class="total-amount" id="totalAmount">
+                    0원
+                </div>
+            </div>
+        </section>
+
+        <!-- 지출 목록 -->
+        <section class="card">
+            <h2>지출 내역</h2>
+
+            <div id="expenseList">
+                <p class="empty-message">
+                    아직 기록된 지출이 없습니다.
+                </p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // 필요한 HTML 요소 가져오기
+        const expenseForm = document.getElementById("expenseForm");
+        const amountInput = document.getElementById("amount");
+        const categoryInput = document.getElementById("category");
+        const dateInput = document.getElementById("date");
+        const expenseList = document.getElementById("expenseList");
+        const totalAmount = document.getElementById("totalAmount");
+
+        // 지출 데이터를 저장할 배열
+        let expenses = [];
+
+        // 오늘 날짜를 기본값으로 설정
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+
+        dateInput.value = `${year}-${month}-${day}`;
+
+        // 금액 입력 시 숫자만 허용
+        amountInput.addEventListener("input", function() {
+            this.value = this.value.replace(/[^0-9]/g, "");
+        });
+
+        // 지출 추가 버튼을 눌렀을 때
+        expenseForm.addEventListener("submit", function(event) {
+
+            // 페이지 새로고침 방지
+            event.preventDefault();
+
+            // 입력값 가져오기
+            const amount = Number(amountInput.value);
+            const category = categoryInput.value;
+            const date = dateInput.value;
+
+            // 입력값 확인
+            if (!amount || amount <= 0) {
+                alert("1원 이상의 금액을 입력해주세요.");
+                return;
+            }
+
+            if (!date) {
+                alert("지출 날짜를 선택해주세요.");
+                return;
+            }
+
+            // 새로운 지출 데이터 만들기
+            const expense = {
+                amount: amount,
+                category: category,
+                date: date
+            };
+
+            // 배열에 지출 데이터 추가
+            expenses.push(expense);
+
+            // 화면 업데이트
+            renderExpenses();
+
+            // 금액 입력칸 초기화
+            amountInput.value = "";
+
+            // 날짜는 오늘 날짜로 유지
+            dateInput.value = `${year}-${month}-${day}`;
+        });
+
+        // 지출 목록과 총 금액 화면에 표시
+        function renderExpenses() {
+
+            // 목록 초기화
+            expenseList.innerHTML = "";
+
+            // 지출 내역이 없는 경우
+            if (expenses.length === 0) {
+                expenseList.innerHTML = `
+                    <p class="empty-message">
+                        아직 기록된 지출이 없습니다.
+                    </p>
+                `;
+                totalAmount.textContent = "0원";
+                return;
+            }
+
+            // 총 지출 금액 계산
+            let total = 0;
+
+            // 각 지출을 화면에 표시
+            expenses.forEach(function(expense) {
+
+                total += expense.amount;
+
+                const item = document.createElement("div");
+                item.className = "expense-item";
+
+                const info = document.createElement("div");
+                info.className = "expense-info";
+
+                const categoryText = document.createElement("div");
+                categoryText.className = "expense-category";
+                categoryText.textContent = expense.category;
+
+                const dateText = document.createElement("div");
+                dateText.className = "expense-date";
+                dateText.textContent = expense.date;
+
+                info.appendChild(categoryText);
+                info.appendChild(dateText);
+
+                const amountText = document.createElement("div");
+                amountText.className = "expense-amount";
+                amountText.textContent =
+                    expense.amount.toLocaleString("ko-KR") + "원";
+
+                item.appendChild(info);
+                item.appendChild(amountText);
+
+                expenseList.appendChild(item);
+            });
+
+            // 총 지출 금액 표시
+            totalAmount.textContent =
+                total.toLocaleString("ko-KR") + "원";
+        }
+    </script>
+
+</body>
+</html>
