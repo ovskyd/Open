@@ -1,4 +1,4 @@
-# Open
+# 소비 기록 및 지출 분석 프로그램(MoneyLog)
 MoneyLog
 
 1. 프로젝트 소개
