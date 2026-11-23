@@ -202,6 +202,36 @@
         .slide-arrow:disabled { opacity:.28; cursor:default; }
         .slide-arrow.left { left:12px; }
         .slide-arrow.right { right:12px; }
+        .expense-item { align-items:center; }
+        .expense-right { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+        /* 카테고리 분석 및 비율 그래프 내부 슬라이드 */
+        .analysis-panel { position:relative; min-height:360px; }
+        #expenseHistoryCard { margin-top:20px; }
+        .analysis-page { display:none; }
+        .analysis-page.active { display:block; }
+        .category-analysis-list { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+        .category-analysis-item {
+            background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+            padding:17px; min-width:0;
+        }
+        .category-analysis-name { color:#475569; font-weight:600; margin-bottom:9px; }
+        .category-analysis-amount { color:#2563eb; font-size:21px; font-weight:bold; overflow-wrap:anywhere; }
+        .category-analysis-share { color:#64748b; font-size:13px; margin-top:6px; }
+        .analysis-total { margin-top:14px; padding:14px; background:#eff6ff; border-radius:9px; text-align:center; }
+        .analysis-controls { display:flex; justify-content:center; align-items:center; gap:18px; margin-top:18px; }
+        .analysis-controls button {
+            width:34px; height:34px; padding:0; border-radius:50%;
+            background:#dbeafe; color:#1d4ed8; font-size:20px;
+        }
+        .analysis-controls button:hover { background:#bfdbfe; }
+        .analysis-controls button:disabled { opacity:.35; cursor:default; }
+        .analysis-page-label { color:#64748b; font-size:13px; }
+        @media (max-width:500px) {
+            .analysis-panel { min-height:340px; }
+            .category-analysis-list { grid-template-columns:1fr; }
+            .category-analysis-amount { font-size:19px; }
+            .expense-right { gap:5px; }
+        }
 
         /* 모바일 화면 */
         @media (max-width: 500px) {
@@ -251,7 +281,7 @@
 
                 <div class="input-group">
                     <label for="category">카테고리</label>
-                    <input type="text" id="category" placeholder="카테고리를 직접 입력하세요 (예: 식비, 교통비, 취미)" required>
+                    <input type="text" id="category" placeholder="원하는 카테고리명을 입력하세요 (예: 식비, 카페, 취미)" required>
                 </div>
 
                 <div class="input-group">
@@ -276,11 +306,34 @@
             </div>
         </section>
 
-        <!-- 지출 확인: 2개 슬라이드 -->
-        <section class="card expense-slides">
-            <button type="button" class="slide-arrow left" id="slidePrev" aria-label="이전 페이지">‹</button>
-            <button type="button" class="slide-arrow right" id="slideNext" aria-label="다음 페이지">›</button>
-            <div class="slide-page active" id="expenseSlide1">
+        <!-- 카테고리 분석: 금액 분석과 비율 그래프를 하나의 카드 안에서 전환 -->
+        <section class="card category-chart-card analysis-panel" id="categoryChartSection">
+                <h2 style="margin-top:0;">카테고리별 지출 분석</h2>
+                <div class="analysis-page active" id="analysisPage1">
+                    <p style="color:#64748b; margin:0;">선택한 연도와 월을 기준으로 계산합니다.</p>
+                    <div class="category-analysis-list" id="categoryAnalysisList"></div>
+                    <div class="analysis-total">
+                        <div class="total-label">분석 대상 총 지출</div>
+                        <div class="total-amount" id="analysisTotal">0원</div>
+                    </div>
+                </div>
+                <div class="analysis-page" id="analysisPage2">
+                    <h2>카테고리별 지출 비율</h2>
+                    <div class="category-chart-wrap">
+                        <canvas id="categoryChart" class="category-chart-canvas" aria-label="카테고리별 지출 비율 원형 그래프"></canvas>
+                        <div id="categoryChartLegend" class="category-chart-legend" aria-hidden="true"></div>
+                    </div>
+                </div>
+                <div class="analysis-controls" aria-label="분석 화면 전환">
+                    <button type="button" id="analysisPrev" aria-label="이전 분석">‹</button>
+                    <span class="analysis-page-label" id="analysisPageLabel">1 / 2</span>
+                    <button type="button" id="analysisNext" aria-label="다음 분석">›</button>
+                </div>
+        </section>
+
+        <!-- 지출 내역은 기존처럼 별도의 카드로 표시 -->
+        <section class="card" id="expenseHistoryCard">
+
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
                 <h2 style="margin:0;">지출 내역</h2>
                 <select id="categoryFilter" class="blue-select category-select" aria-label="카테고리 필터" style="min-width:150px;">
@@ -314,20 +367,7 @@
                     아직 기록된 지출이 없습니다.
                 </p>
             </div>
-            </div>
-            <div class="slide-page" id="expenseSlide2">
-        <section class="category-chart-card" id="categoryChartSection">
-            <h2>카테고리별 지출 비율</h2>
-            <div class="category-chart-wrap">
-                <canvas id="categoryChart" class="category-chart-canvas" aria-label="카테고리별 지출 비율 원형 그래프"></canvas>
-                <div id="categoryChartLegend" class="category-chart-legend" aria-hidden="true"></div>
-            </div>
-        </section>
-            </div>
-            <div class="slide-indicator" aria-label="페이지 표시">
-                <span class="slide-dot active" id="slideDot1"></span>
-                <span class="slide-dot" id="slideDot2"></span>
-            </div>
+
         </section>
     </div>
     <script>
@@ -503,8 +543,7 @@
             updateDateOptions(date.slice(0, 4), date.slice(5, 7));
 
             // 화면 업데이트
-            showExpenseSlide(1);
-        renderExpenses();
+            renderExpenses();
 
             // 금액 입력칸 초기화
             amountInput.value = "";
@@ -527,6 +566,7 @@
                 expenseList.innerHTML = `<p class="empty-message">선택한 조건에 지출 내역이 없습니다.</p>`;
                 totalAmount.textContent = "0원";
                 updateBudgetStatus();
+                renderCategoryAnalysis(monthExpenses);
                 drawCategoryChart(monthExpenses);
                 return;
             }
@@ -550,20 +590,128 @@
                 dateText.textContent = expense.date;
                 info.appendChild(categoryText);
                 info.appendChild(dateText);
+                const right = document.createElement("div");
+                right.className = "expense-right";
                 const amountText = document.createElement("div");
                 amountText.className = "expense-amount";
                 amountText.textContent = expense.amount.toLocaleString("ko-KR") + "원";
+
+                right.appendChild(amountText);
                 item.appendChild(info);
-                item.appendChild(amountText);
+                item.appendChild(right);
                 expenseList.appendChild(item);
             });
             totalAmount.textContent = total.toLocaleString("ko-KR") + "원";
             updateBudgetStatus();
+            renderCategoryAnalysis(monthExpenses);
             drawCategoryChart(monthExpenses);
         }
 
 
-        // 선택 월 카테고리별 지출 합계를 큰 비율부터 시계 방향으로 표시
+        // 선택한 달의 실제 카테고리 이름을 유지하고, 가장 적은 카테고리부터
+        // 누적 비중이 5% 이하인 항목만 '기타'로 묶습니다.
+        function getCategoryAnalysisData(monthExpenses) {
+            // 사용자가 실제로 입력한 카테고리명으로만 지출 합계를 만듭니다.
+            const categoryTotals = new Map();
+
+            monthExpenses.forEach(expense => {
+                const category = (expense.category || "미분류").trim() || "미분류";
+                const amount = Number(expense.amount || 0);
+
+                if (amount <= 0) return;
+                categoryTotals.set(
+                    category,
+                    (categoryTotals.get(category) || 0) + amount
+                );
+            });
+
+            const total = [...categoryTotals.values()]
+                .reduce((sum, amount) => sum + amount, 0);
+
+            // 금액이 작은 카테고리부터 누적 비율이 5% 이하인 항목만 '기타'로 묶습니다.
+            // 다음 항목을 더했을 때 5%를 넘으면 그 항목부터는 원래 카테고리명으로 표시합니다.
+            const categories = [...categoryTotals.entries()]
+                .map(([category, amount]) => ({ category, amount }))
+                .sort((a, b) =>
+                    a.amount - b.amount ||
+                    a.category.localeCompare(b.category, "ko")
+                );
+
+            const smallCategories = new Set();
+            let smallCategoryTotal = 0;
+
+            if (total > 0) {
+                for (const item of categories) {
+                    const nextTotal = smallCategoryTotal + item.amount;
+                    if ((nextTotal / total) * 100 <= 5) {
+                        smallCategories.add(item.category);
+                        smallCategoryTotal = nextTotal;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // '기타'에 포함되지 않은 카테고리는 사용자가 입력한 이름을 그대로 유지합니다.
+            const groupedTotals = new Map();
+            categories.forEach(item => {
+                const displayName = smallCategories.has(item.category)
+                    ? "기타"
+                    : item.category;
+
+                groupedTotals.set(
+                    displayName,
+                    (groupedTotals.get(displayName) || 0) + item.amount
+                );
+            });
+
+            const data = [...groupedTotals.entries()]
+                .map(([category, amount]) => ({ category, amount }))
+                .sort((a, b) =>
+                    b.amount - a.amount ||
+                    a.category.localeCompare(b.category, "ko")
+                );
+
+            return { total, data };
+        }
+
+        // 카테고리별 지출 금액과 비율을 표시합니다.
+        function renderCategoryAnalysis(monthExpenses) {
+            const { total, data } = getCategoryAnalysisData(monthExpenses);
+            const list = document.getElementById("categoryAnalysisList");
+            list.innerHTML = "";
+
+            if (!data.length || total <= 0) {
+                list.innerHTML = '<p class="empty-message">선택한 달의 지출 기록이 없습니다.</p>';
+            }
+
+            data.forEach(itemData => {
+                const percent = itemData.amount / total * 100;
+                const item = document.createElement("div");
+                item.className = "category-analysis-item";
+
+                const name = document.createElement("div");
+                name.className = "category-analysis-name";
+                name.textContent = itemData.category;
+
+                const value = document.createElement("div");
+                value.className = "category-analysis-amount";
+                value.textContent = itemData.amount.toLocaleString("ko-KR") + "원";
+
+                const share = document.createElement("div");
+                share.className = "category-analysis-share";
+                share.textContent = `전체 지출의 ${percent.toFixed(1)}%`;
+
+                item.appendChild(name);
+                item.appendChild(value);
+                item.appendChild(share);
+                list.appendChild(item);
+            });
+
+            document.getElementById("analysisTotal").textContent = total.toLocaleString("ko-KR") + "원";
+        }
+
+        // 금액 분석과 동일한 카테고리 묶음 기준으로 원형 그래프를 그립니다.
         function drawCategoryChart(monthExpenses) {
             if (!monthExpenses) {
                 const key = `${yearFilter.value}-${monthFilter.value}`;
@@ -572,14 +720,7 @@
             const canvas = document.getElementById("categoryChart");
             const legend = document.getElementById("categoryChartLegend");
             const ctx = canvas.getContext("2d");
-            const categoryTotals = {};
-            monthExpenses.forEach(expense => {
-                const category = (expense.category || "미분류").trim() || "미분류";
-                categoryTotals[category] = (categoryTotals[category] || 0) + Number(expense.amount || 0);
-            });
-            const data = Object.entries(categoryTotals).map(([category, amount]) => ({category, amount}))
-                .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category, "ko"));
-            const total = data.reduce((sum, item) => sum + item.amount, 0);
+            const { data, total } = getCategoryAnalysisData(monthExpenses);
             const width = canvas.clientWidth || 260, height = canvas.clientHeight || 260;
             const dpr = window.devicePixelRatio || 1;
             canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
@@ -608,46 +749,36 @@
                     ctx.font = "bold 10px Arial, sans-serif"; ctx.fillText(`${percent.toFixed(1)}%`, lx, ly + 7, 76); ctx.restore();
                 }
                 angle = endAngle;
-
             });
         }
 
-
-        function showExpenseSlide(page) {
-            page = page === 2 ? 2 : 1;
-            document.getElementById("expenseSlide1").classList.toggle("active", page === 1);
-            document.getElementById("expenseSlide2").classList.toggle("active", page === 2);
-            document.getElementById("slideDot1").classList.toggle("active", page === 1);
-            document.getElementById("slideDot2").classList.toggle("active", page === 2);
-            document.getElementById("slidePrev").disabled = page === 1;
-            document.getElementById("slideNext").disabled = page === 2;
-            if (page === 2) drawCategoryChart();
+        // 카테고리 분석 화면 안에서 금액 분석과 원형 그래프 전환
+        let currentAnalysisPage = 1;
+        function showAnalysisPage(page) {
+            currentAnalysisPage = page === 2 ? 2 : 1;
+            document.getElementById("analysisPage1").classList.toggle("active", currentAnalysisPage === 1);
+            document.getElementById("analysisPage2").classList.toggle("active", currentAnalysisPage === 2);
+            document.getElementById("analysisPageLabel").textContent = `${currentAnalysisPage} / 2`;
+            document.getElementById("analysisPrev").disabled = currentAnalysisPage === 1;
+            document.getElementById("analysisNext").disabled = currentAnalysisPage === 2;
+            if (currentAnalysisPage === 2) drawCategoryChart();
         }
-        document.getElementById("slidePrev").addEventListener("click", () => showExpenseSlide(1));
-        document.getElementById("slideNext").addEventListener("click", () => showExpenseSlide(2));
+        document.getElementById("analysisPrev").addEventListener("click", () => showAnalysisPage(1));
+        document.getElementById("analysisNext").addEventListener("click", () => showAnalysisPage(2));
 
-        // 슬라이드 이동: 모바일 좌우 스와이프 및 키보드 좌우 방향키
-        let slideTouchStartX = null;
-        const expenseSlides = document.querySelector(".expense-slides");
-        expenseSlides.addEventListener("touchstart", function(event) {
-            slideTouchStartX = event.changedTouches[0].clientX;
+        // 분석 카드 안에서 금액 분석과 원형 그래프를 전환합니다.
+        // 모바일에서는 좌우 스와이프로도 전환할 수 있습니다.
+        const analysisCard = document.getElementById("categoryChartSection");
+        let analysisTouchStartX = null;
+        analysisCard.addEventListener("touchstart", function(event) {
+            analysisTouchStartX = event.changedTouches[0].clientX;
         }, { passive: true });
-        expenseSlides.addEventListener("touchend", function(event) {
-            if (slideTouchStartX === null) return;
-            const deltaX = event.changedTouches[0].clientX - slideTouchStartX;
-            if (Math.abs(deltaX) > 50) {
-                const currentPage = document.getElementById("expenseSlide1").classList.contains("active") ? 1 : 2;
-                showExpenseSlide(deltaX < 0 ? 2 : 1);
-            }
-            slideTouchStartX = null;
+        analysisCard.addEventListener("touchend", function(event) {
+            if (analysisTouchStartX === null) return;
+            const deltaX = event.changedTouches[0].clientX - analysisTouchStartX;
+            if (Math.abs(deltaX) > 50) showAnalysisPage(deltaX < 0 ? 2 : 1);
+            analysisTouchStartX = null;
         }, { passive: true });
-        document.addEventListener("keydown", function(event) {
-            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-            if (event.target.matches("input, textarea, select")) return;
-            const currentPage = document.getElementById("expenseSlide1").classList.contains("active") ? 1 : 2;
-            showExpenseSlide(event.key === "ArrowRight" ? 2 : 1);
-        });
-
 
         // 조회 중인 연/월의 지출을 해당 월 예산과 비교
         function updateBudgetStatus() {
@@ -673,6 +804,7 @@
         // 저장된 내역을 처음 화면에 표시
         updateDateOptions();
         renderExpenses();
+        showAnalysisPage(1);
     </script>
 
 </body>
