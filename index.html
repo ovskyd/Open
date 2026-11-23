@@ -77,6 +77,29 @@
             border-color: #2563eb;
         }
 
+        /* 카테고리·연도·월 선택 옵션: 예산 박스와 어울리는 블루 톤 */
+        .blue-select {
+            background: rgba(239, 246, 255, 0.88);
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.06);
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .blue-select:hover {
+            background: rgba(219, 234, 254, 0.92);
+            border-color: #93c5fd;
+        }
+        .blue-select:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+        }
+        .blue-select option {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
         /* 추가 버튼 */
         button {
             width: 100%;
@@ -93,6 +116,11 @@
         button:hover {
             background-color: #1d4ed8;
         }
+
+        /* 예산 영역 */
+        .budget-box { background-color: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .budget-status { margin-top: 12px; font-weight: bold; text-align: center; color: #2563eb; }
+        .budget-status.over { color: #dc2626; }
 
         /* 총 지출 영역 */
         .total-box {
@@ -152,6 +180,29 @@
             padding: 30px 10px;
         }
 
+        /* 카테고리별 지출 원형 그래프: 예산 박스와 유사한 블루 톤 */
+        .category-chart-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; }
+        .category-chart-wrap { display:flex; align-items:center; justify-content:center; width:100%; }
+        .category-chart-canvas { width:340px; height:340px; max-width:100%; }
+        .category-chart-legend { display:none; }
+        .chart-empty { text-align:center; color:#64748b; padding:20px 10px; }
+
+        /* 지출 확인 슬라이드 */
+        .expense-slides { overflow:hidden; position:relative; padding:20px 20px 54px; }
+        .slide-page { display:none; }
+        .slide-page.active { display:block; }
+        .slide-indicator { display:flex; justify-content:center; align-items:center; gap:7px; padding:16px 0 2px; position:absolute; bottom:16px; left:50%; transform:translateX(-50%); }
+        .slide-dot { width:7px; height:7px; border-radius:50%; background:#cbd5e1; transition:background .2s, transform .2s; }
+        .slide-dot.active { background:#2563eb; transform:scale(1.2); }
+        .slide-arrow { position:absolute; bottom:15px; top:auto; transform:none; z-index:2; width:24px; height:24px; padding:0; border:0; border-radius:0; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+        .slide-arrow::before { content:''; width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; }
+        .slide-arrow.left::before { border-right:12px solid #2563eb; }
+        .slide-arrow.right::before { border-left:12px solid #2563eb; }
+        .slide-arrow:hover { background:transparent; }
+        .slide-arrow:disabled { opacity:.28; cursor:default; }
+        .slide-arrow.left { left:12px; }
+        .slide-arrow.right { right:12px; }
+
         /* 모바일 화면 */
         @media (max-width: 500px) {
             body {
@@ -165,6 +216,9 @@
             .total-amount {
                 font-size: 25px;
             }
+            .category-chart-card { padding:16px; }
+            .category-chart-canvas { width:280px; height:280px; }
+            .expense-slides { padding-left:16px; padding-right:16px; padding-bottom:54px; }
         }
     </style>
 </head>
@@ -197,12 +251,7 @@
 
                 <div class="input-group">
                     <label for="category">카테고리</label>
-                    <select id="category">
-                        <option value="식비">식비</option>
-                        <option value="교통비">교통비</option>
-                        <option value="쇼핑">쇼핑</option>
-                        <option value="기타">기타</option>
-                    </select>
+                    <input type="text" id="category" placeholder="카테고리를 직접 입력하세요 (예: 식비, 교통비, 취미)" required>
                 </div>
 
                 <div class="input-group">
@@ -227,19 +276,60 @@
             </div>
         </section>
 
-        <!-- 지출 목록 -->
-        <section class="card">
-            <h2>지출 내역</h2>
+        <!-- 지출 확인: 2개 슬라이드 -->
+        <section class="card expense-slides">
+            <button type="button" class="slide-arrow left" id="slidePrev" aria-label="이전 페이지">‹</button>
+            <button type="button" class="slide-arrow right" id="slideNext" aria-label="다음 페이지">›</button>
+            <div class="slide-page active" id="expenseSlide1">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                <h2 style="margin:0;">지출 내역</h2>
+                <select id="categoryFilter" class="blue-select category-select" aria-label="카테고리 필터" style="min-width:150px;">
+                    <option value="all">전체 카테고리</option>
+                </select>
+            </div>
+            <div class="input-group" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+                <div style="flex:1; min-width:130px;">
+                    <select id="yearFilter" class="blue-select" aria-label="조회 년도"></select>
+                </div>
+                <div style="flex:1; min-width:130px;">
+                    <select id="monthFilter" class="blue-select" aria-label="조회 월"></select>
+                </div>
+            </div>
+
+            <div class="budget-row" style="display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; margin:16px 0;">
+                <div class="budget-box" style="flex:1; min-width:220px;">
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label for="budgetInput">월 예산 (원)</label>
+                        <input type="text" id="budgetInput" placeholder="조회 월 예산을 입력하세요" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="budget-box" style="flex:1; min-width:220px; display:flex; flex-direction:column; justify-content:center;">
+                    <div class="budget-status" id="budgetStatus" style="margin-top:0;">예산을 입력하면 초과/잔액이 표시됩니다.</div>
+                </div>
+            </div>
+
 
             <div id="expenseList">
                 <p class="empty-message">
                     아직 기록된 지출이 없습니다.
                 </p>
             </div>
+            </div>
+            <div class="slide-page" id="expenseSlide2">
+        <section class="category-chart-card" id="categoryChartSection">
+            <h2>카테고리별 지출 비율</h2>
+            <div class="category-chart-wrap">
+                <canvas id="categoryChart" class="category-chart-canvas" aria-label="카테고리별 지출 비율 원형 그래프"></canvas>
+                <div id="categoryChartLegend" class="category-chart-legend" aria-hidden="true"></div>
+            </div>
         </section>
-
+            </div>
+            <div class="slide-indicator" aria-label="페이지 표시">
+                <span class="slide-dot active" id="slideDot1"></span>
+                <span class="slide-dot" id="slideDot2"></span>
+            </div>
+        </section>
     </div>
-
     <script>
         // 필요한 HTML 요소 가져오기
         const expenseForm = document.getElementById("expenseForm");
@@ -248,9 +338,116 @@
         const dateInput = document.getElementById("date");
         const expenseList = document.getElementById("expenseList");
         const totalAmount = document.getElementById("totalAmount");
+        const budgetInput = document.getElementById("budgetInput");
+        const budgetStatus = document.getElementById("budgetStatus");
+        const monthFilter = document.getElementById("monthFilter");
+        const yearFilter = document.getElementById("yearFilter");
+        const categoryFilter = document.getElementById("categoryFilter");
 
-        // 지출 데이터를 저장할 배열
-        let expenses = [];
+        // 지출 데이터와 월별 예산 저장 키
+        const STORAGE_KEY = "moneylog_expenses";
+        const BUDGET_KEY = "moneylog_monthly_budgets";
+        let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        let monthlyBudgets = JSON.parse(localStorage.getItem(BUDGET_KEY) || "{}");
+
+        function selectedYearMonth() {
+            return `${yearFilter.value}-${monthFilter.value}`;
+        }
+        function currentMonthBudget() {
+            return Number(monthlyBudgets[selectedYearMonth()] || 0);
+        }
+        function saveBudget() {
+            const key = selectedYearMonth();
+            if (!key || key.endsWith("-")) return;
+            const digits = budgetInput.value.replace(/[^0-9]/g, "");
+            const amount = Number(digits || 0);
+            if (amount > 0) monthlyBudgets[key] = amount;
+            else delete monthlyBudgets[key];
+            localStorage.setItem(BUDGET_KEY, JSON.stringify(monthlyBudgets));
+            updateBudgetStatus();
+        }
+        budgetInput.addEventListener("input", function() {
+            const digits = this.value.replace(/[^0-9]/g, "");
+            this.value = digits ? Number(digits).toLocaleString("ko-KR") : "";
+            saveBudget();
+        });
+        function syncBudgetInput() {
+            const amount = currentMonthBudget();
+            budgetInput.value = amount > 0 ? amount.toLocaleString("ko-KR") : "";
+            updateBudgetStatus();
+        }
+
+        function saveExpenses() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+        }
+
+        // 실제 지출 기록에 존재하는 연도와 월만 선택 옵션으로 구성
+        function updateDateOptions(preferredYear, preferredMonth) {
+            const availableMonthsByYear = {};
+            expenses.forEach(expense => {
+                if (!expense.date || !/^\d{4}-\d{2}/.test(expense.date)) return;
+                const yearValue = expense.date.slice(0, 4);
+                const monthValue = expense.date.slice(5, 7);
+                if (!availableMonthsByYear[yearValue]) availableMonthsByYear[yearValue] = new Set();
+                availableMonthsByYear[yearValue].add(monthValue);
+            });
+            const years = Object.keys(availableMonthsByYear).sort((a, b) => b.localeCompare(a));
+            const selectedYear = preferredYear || yearFilter.value;
+            const yearValue = years.includes(selectedYear) ? selectedYear : (years[0] || "");
+            const months = yearValue ? [...availableMonthsByYear[yearValue]].sort((a, b) => a.localeCompare(b)) : [];
+            const selectedMonth = preferredMonth || monthFilter.value;
+            const monthValue = months.includes(selectedMonth) ? selectedMonth : (months[months.length - 1] || "");
+
+            yearFilter.innerHTML = "";
+            years.forEach(value => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = `${value}년`;
+                yearFilter.appendChild(option);
+            });
+            if (!years.length) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "지출 기록 없음";
+                yearFilter.appendChild(option);
+            }
+            yearFilter.value = yearValue;
+
+            monthFilter.innerHTML = "";
+            months.forEach(value => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = `${Number(value)}월`;
+                monthFilter.appendChild(option);
+            });
+            if (!months.length) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "지출 기록 없음";
+                monthFilter.appendChild(option);
+            }
+            monthFilter.value = monthValue;
+        }
+        yearFilter.addEventListener("change", renderExpenses);
+        monthFilter.addEventListener("change", renderExpenses);
+        categoryFilter.addEventListener("change", renderExpenses);
+
+        function updateCategoryOptions() {
+            const categories = [...new Set(expenses.map(expense => (expense.category || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+            const current = categoryFilter.value || "all";
+            categoryFilter.innerHTML = "";
+            const allOption = document.createElement("option");
+            allOption.value = "all";
+            allOption.textContent = "전체 카테고리";
+            categoryFilter.appendChild(allOption);
+            categories.forEach(category => {
+                const option = document.createElement("option");
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+            categoryFilter.value = categories.includes(current) ? current : "all";
+        }
 
         // 오늘 날짜를 기본값으로 설정
         const today = new Date();
@@ -273,12 +470,17 @@
 
             // 입력값 가져오기
             const amount = Number(amountInput.value);
-            const category = categoryInput.value;
+            const category = categoryInput.value.trim();
             const date = dateInput.value;
 
             // 입력값 확인
             if (!amount || amount <= 0) {
                 alert("1원 이상의 금액을 입력해주세요.");
+                return;
+            }
+
+            if (!category) {
+                alert("카테고리를 입력해주세요.");
                 return;
             }
 
@@ -291,14 +493,18 @@
             const expense = {
                 amount: amount,
                 category: category,
-                date: date
+                date: date,
+                createdAt: Date.now()
             };
 
-            // 배열에 지출 데이터 추가
+            // 배열에 지출 데이터 추가 후 저장
             expenses.push(expense);
+            saveExpenses();
+            updateDateOptions(date.slice(0, 4), date.slice(5, 7));
 
             // 화면 업데이트
-            renderExpenses();
+            showExpenseSlide(1);
+        renderExpenses();
 
             // 금액 입력칸 초기화
             amountInput.value = "";
@@ -307,63 +513,166 @@
             dateInput.value = `${year}-${month}-${day}`;
         });
 
-        // 지출 목록과 총 금액 화면에 표시
+        // 선택한 월의 지출 목록과 합계를 화면에 표시
         function renderExpenses() {
-
-            // 목록 초기화
+            updateDateOptions(yearFilter.value, monthFilter.value);
+            syncBudgetInput();
             expenseList.innerHTML = "";
+            updateCategoryOptions();
+            const selectedYearMonth = `${yearFilter.value}-${monthFilter.value}`;
+            const monthExpenses = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === selectedYearMonth);
+            const filteredExpenses = categoryFilter.value === "all" ? monthExpenses : monthExpenses.filter(expense => expense.category === categoryFilter.value);
 
-            // 지출 내역이 없는 경우
-            if (expenses.length === 0) {
-                expenseList.innerHTML = `
-                    <p class="empty-message">
-                        아직 기록된 지출이 없습니다.
-                    </p>
-                `;
+            if (filteredExpenses.length === 0) {
+                expenseList.innerHTML = `<p class="empty-message">선택한 조건에 지출 내역이 없습니다.</p>`;
                 totalAmount.textContent = "0원";
+                updateBudgetStatus();
+                drawCategoryChart(monthExpenses);
                 return;
             }
 
-            // 총 지출 금액 계산
-            let total = 0;
+            const sortedExpenses = [...filteredExpenses].sort(function(a, b) {
+                if (a.date !== b.date) return b.date.localeCompare(a.date);
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
+            const total = sortedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-            // 각 지출을 화면에 표시
-            expenses.forEach(function(expense) {
-
-                total += expense.amount;
-
+            sortedExpenses.forEach(function(expense) {
                 const item = document.createElement("div");
                 item.className = "expense-item";
-
                 const info = document.createElement("div");
                 info.className = "expense-info";
-
                 const categoryText = document.createElement("div");
                 categoryText.className = "expense-category";
                 categoryText.textContent = expense.category;
-
                 const dateText = document.createElement("div");
                 dateText.className = "expense-date";
                 dateText.textContent = expense.date;
-
                 info.appendChild(categoryText);
                 info.appendChild(dateText);
-
                 const amountText = document.createElement("div");
                 amountText.className = "expense-amount";
-                amountText.textContent =
-                    expense.amount.toLocaleString("ko-KR") + "원";
-
+                amountText.textContent = expense.amount.toLocaleString("ko-KR") + "원";
                 item.appendChild(info);
                 item.appendChild(amountText);
-
                 expenseList.appendChild(item);
             });
-
-            // 총 지출 금액 표시
-            totalAmount.textContent =
-                total.toLocaleString("ko-KR") + "원";
+            totalAmount.textContent = total.toLocaleString("ko-KR") + "원";
+            updateBudgetStatus();
+            drawCategoryChart(monthExpenses);
         }
+
+
+        // 선택 월 카테고리별 지출 합계를 큰 비율부터 시계 방향으로 표시
+        function drawCategoryChart(monthExpenses) {
+            if (!monthExpenses) {
+                const key = `${yearFilter.value}-${monthFilter.value}`;
+                monthExpenses = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === key);
+            }
+            const canvas = document.getElementById("categoryChart");
+            const legend = document.getElementById("categoryChartLegend");
+            const ctx = canvas.getContext("2d");
+            const categoryTotals = {};
+            monthExpenses.forEach(expense => {
+                const category = (expense.category || "미분류").trim() || "미분류";
+                categoryTotals[category] = (categoryTotals[category] || 0) + Number(expense.amount || 0);
+            });
+            const data = Object.entries(categoryTotals).map(([category, amount]) => ({category, amount}))
+                .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category, "ko"));
+            const total = data.reduce((sum, item) => sum + item.amount, 0);
+            const width = canvas.clientWidth || 260, height = canvas.clientHeight || 260;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
+            legend.innerHTML = "";
+            if (!data.length || total <= 0) {
+                legend.innerHTML = '<div class="chart-empty">선택한 달의 지출 기록이 없습니다.</div>';
+                return;
+            }
+            const colors = ["rgba(37,99,235,.78)", "rgba(59,130,246,.66)", "rgba(96,165,250,.72)", "rgba(29,78,216,.58)", "rgba(147,197,253,.88)", "rgba(14,165,233,.66)", "rgba(79,70,229,.58)", "rgba(125,211,252,.78)", "rgba(30,64,175,.52)", "rgba(191,219,254,.95)", "rgba(56,189,248,.58)", "rgba(99,102,241,.62)"];
+            const cx = width / 2, cy = height / 2, radius = Math.min(width, height) * 0.43;
+            let angle = -Math.PI / 2;
+            data.forEach((item, index) => {
+                const slice = item.amount / total * Math.PI * 2;
+                const startAngle = angle, endAngle = angle + slice;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, startAngle, endAngle); ctx.closePath();
+                ctx.fillStyle = colors[index % colors.length]; ctx.fill();
+                const percent = item.amount / total * 100;
+                if (percent >= 8) {
+                    const labelAngle = startAngle + slice / 2, labelRadius = radius * 0.66;
+                    const lx = cx + Math.cos(labelAngle) * labelRadius, ly = cy + Math.sin(labelAngle) * labelRadius;
+                    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff";
+                    ctx.shadowColor = "rgba(30,64,175,.35)"; ctx.shadowBlur = 3;
+                    const shortCategory = item.category.length > 8 ? item.category.slice(0, 7) + "…" : item.category;
+                    ctx.font = "bold 11px Arial, sans-serif"; ctx.fillText(shortCategory, lx, ly - 6, 76);
+                    ctx.font = "bold 10px Arial, sans-serif"; ctx.fillText(`${percent.toFixed(1)}%`, lx, ly + 7, 76); ctx.restore();
+                }
+                angle = endAngle;
+
+            });
+        }
+
+
+        function showExpenseSlide(page) {
+            page = page === 2 ? 2 : 1;
+            document.getElementById("expenseSlide1").classList.toggle("active", page === 1);
+            document.getElementById("expenseSlide2").classList.toggle("active", page === 2);
+            document.getElementById("slideDot1").classList.toggle("active", page === 1);
+            document.getElementById("slideDot2").classList.toggle("active", page === 2);
+            document.getElementById("slidePrev").disabled = page === 1;
+            document.getElementById("slideNext").disabled = page === 2;
+            if (page === 2) drawCategoryChart();
+        }
+        document.getElementById("slidePrev").addEventListener("click", () => showExpenseSlide(1));
+        document.getElementById("slideNext").addEventListener("click", () => showExpenseSlide(2));
+
+        // 슬라이드 이동: 모바일 좌우 스와이프 및 키보드 좌우 방향키
+        let slideTouchStartX = null;
+        const expenseSlides = document.querySelector(".expense-slides");
+        expenseSlides.addEventListener("touchstart", function(event) {
+            slideTouchStartX = event.changedTouches[0].clientX;
+        }, { passive: true });
+        expenseSlides.addEventListener("touchend", function(event) {
+            if (slideTouchStartX === null) return;
+            const deltaX = event.changedTouches[0].clientX - slideTouchStartX;
+            if (Math.abs(deltaX) > 50) {
+                const currentPage = document.getElementById("expenseSlide1").classList.contains("active") ? 1 : 2;
+                showExpenseSlide(deltaX < 0 ? 2 : 1);
+            }
+            slideTouchStartX = null;
+        }, { passive: true });
+        document.addEventListener("keydown", function(event) {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            if (event.target.matches("input, textarea, select")) return;
+            const currentPage = document.getElementById("expenseSlide1").classList.contains("active") ? 1 : 2;
+            showExpenseSlide(event.key === "ArrowRight" ? 2 : 1);
+        });
+
+
+        // 조회 중인 연/월의 지출을 해당 월 예산과 비교
+        function updateBudgetStatus() {
+            const budget = currentMonthBudget();
+            const selectedYearMonth = `${yearFilter.value}-${monthFilter.value}`;
+            const monthTotal = expenses.reduce(function(sum, expense) {
+                return expense.date && expense.date.slice(0, 7) === selectedYearMonth ? sum + expense.amount : sum;
+            }, 0);
+            if (budget <= 0) {
+                budgetStatus.textContent = "선택한 달의 예산을 입력하세요.";
+                budgetStatus.classList.remove("over");
+                return;
+            }
+            const difference = budget - monthTotal;
+            if (difference < 0) {
+                budgetStatus.textContent = `예산 초과: ${difference.toLocaleString("ko-KR")}원`;
+                budgetStatus.classList.add("over");
+            } else {
+                budgetStatus.textContent = `남은 예산: ${difference.toLocaleString("ko-KR")}원`;
+                budgetStatus.classList.remove("over");
+            }
+        }
+        // 저장된 내역을 처음 화면에 표시
+        updateDateOptions();
+        renderExpenses();
     </script>
 
 </body>
