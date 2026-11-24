@@ -174,6 +174,47 @@
             white-space: nowrap;
         }
 
+        /* 내역 삭제 버튼 */
+        .delete-button {
+            width: auto;
+            padding: 8px 12px;
+            margin-left: 8px;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: background-color .18s ease, transform .18s ease;
+        }
+
+        .delete-button:hover {
+            background: #fecaca;
+            transform: translateY(-1px);
+        }
+
+        .expense-item {
+            transition: background-color .18s ease;
+        }
+
+        .expense-item:hover {
+            background-color: #f8fafc;
+        }
+
+        @media (max-width: 480px) {
+            .expense-item {
+                align-items: flex-start;
+            }
+            .expense-right {
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+            .delete-button {
+                margin-left: 0;
+            }
+        }
+
         .empty-message {
             text-align: center;
             color: #999;
@@ -597,6 +638,26 @@
                 amountText.textContent = expense.amount.toLocaleString("ko-KR") + "원";
 
                 right.appendChild(amountText);
+
+                // 해당 지출 내역 삭제 버튼
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "delete-button";
+                deleteButton.textContent = "삭제";
+                deleteButton.setAttribute("aria-label", `${expense.category} ${expense.amount.toLocaleString("ko-KR")}원 내역 삭제`);
+                deleteButton.addEventListener("click", function() {
+                    const confirmed = confirm("이 지출 내역을 삭제하시겠습니까?");
+                    if (!confirmed) return;
+
+                    const expenseIndex = expenses.indexOf(expense);
+                    if (expenseIndex === -1) return;
+
+                    expenses.splice(expenseIndex, 1);
+                    saveExpenses();
+                    renderExpenses();
+                });
+
+                right.appendChild(deleteButton);
                 item.appendChild(info);
                 item.appendChild(right);
                 expenseList.appendChild(item);
